@@ -80,6 +80,16 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 - 用户工作簿可能包含本地路径、库身份及结果，分享前自行检查。运行状态放在被忽略的 `.work/`、`runs/` 中；Z11 另有自身保存状态。
 - 工具不做 DRC/LVS 签核。Touchstone 导入支持指定的全矩阵 ASCII S 参数格式；不支持的关键字、已被修改的源文件会被拒绝。
 
+## RF-FIELDWORK
+
+产品介绍页：https://rf-fieldwork.pages.dev/cap/?lang=zh（含配音演示片的工具在页面上可直接观看）
+
+其他开源工具：
+
+- [Flux Studio](https://github.com/chloeyntu-byte/flux-studio)：参数化射频无源器件、EMX 扫参、多目标优化与 SNPFit 拟合
+- [Layout 3D Viewer](https://github.com/chloeyntu-byte/layout-3d-viewer)：三维阅读版图、定位 pin、追踪连接
+- [VCO ISF Explorer](https://github.com/chloeyntu-byte/vco-isf-explorer)：ISF、闪烁噪声上变频与相噪贡献
+
 ## 许可证
 
 MIT，见 [LICENSE](LICENSE)。

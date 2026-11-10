@@ -80,6 +80,16 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 - Workbook files may contain your own local paths, library identities and results. Review them before sharing. Runtime state is written into ignored `.work/` and `runs/` directories; Z11 has its own saved state.
 - The tools do not perform DRC/LVS signoff. Touchstone import accepts supported full-matrix ASCII S-parameter formats; unsupported keywords or changed files are rejected.
 
+## RF-FIELDWORK
+
+Product page: https://rf-fieldwork.pages.dev/cap/?lang=en
+
+Other open-source tools:
+
+- [Flux Studio](https://github.com/chloeyntu-byte/flux-studio): parametric RF passives, EMX sweeps, multi-objective search and SNPFit
+- [Layout 3D Viewer](https://github.com/chloeyntu-byte/layout-3d-viewer): read IC layouts in 3D, locate pins and trace connections
+- [VCO ISF Explorer](https://github.com/chloeyntu-byte/vco-isf-explorer): ISF, flicker-noise up-conversion and phase-noise contributions
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
