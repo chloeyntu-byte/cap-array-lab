@@ -76,7 +76,6 @@ class App(tk.Tk):
         self.font_family=tkfont.nametofont('TkDefaultFont').actual('family')
         style=ttk.Style(self)
         style.configure('Muted.TLabel',foreground=fw.DIM)
-        style.configure('Accent.TButton',padding=(12,6))
 
     def _screen_surface(self):
         self.surface=self
@@ -116,7 +115,7 @@ class App(tk.Tk):
         self.search.trace_add('write',lambda *a:self.filter_cells())
         self.cells=tk.Listbox(left,bg=BG,fg=INK,selectbackground='#34576a',highlightthickness=0,borderwidth=0,font=(self.font_family,10),width=23,exportselection=False)
         self.cells.pack(fill='both',expand=True);self.cells.bind('<Double-1>',lambda e:self.add_selected())
-        self.addsymbolbutton=ttk.Button(left,text='+ Place symbol',style='Accent.TButton',command=self.add_selected);self.addsymbolbutton.pack(fill='x',pady=(10,6))
+        self.addsymbolbutton=ttk.Button(left,text='+ Place symbol',command=self.add_selected);self.addsymbolbutton.pack(fill='x',pady=(10,6))
         self.rf_controls=RFControls(self);self.rf_controls.attach(top,left)
         self.addregbutton=ttk.Button(left,text='+ Add register',command=self.add_register_node);self.addregbutton.pack(fill='x')
         self.hierarchybutton=ttk.Button(left,text='Load Maestro hierarchy...',command=lambda:hierarchy_dialog(self));self.hierarchybutton.pack(fill='x',pady=(8,0))
@@ -1080,7 +1079,7 @@ class App(tk.Tk):
                 if inst['view']!=view:self.override_instance_binding(inst,view)
             if changed:self.project.pop('config_template',None)
             self.fill_pins();self.redraw();win.destroy()
-        ttk.Button(box,text='Apply settings',command=apply,style='Accent.TButton').pack(fill='x',pady=8)
+        ttk.Button(box,text='Apply settings',command=apply,style='Primary.TButton').pack(fill='x',pady=8)
         ttk.Button(box,text='Maestro settings...',command=lambda:runtime_dialog(self)).pack(fill='x',pady=3)
         ttk.Button(box,text='Open source config in Virtuoso...',command=self.open_source_config).pack(fill='x',pady=3)
         private=self.project.get('private')

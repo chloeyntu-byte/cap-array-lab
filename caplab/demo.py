@@ -38,14 +38,14 @@ def project(resonator=False):
     p=new_project();p.update(workspace='',library='GENERIC',reference={'library':'GENERIC','cell':'ideal_array'},demo_model='resonator' if resonator else 'array')
     p['settings'].update(frequencies='1G, 2G, 3G',simulation_start='500M',simulation_stop='8G',simulation_points='101',simulation_sweep='linear')
     symbol={'library':'GENERIC','cell':'Ideal switched C','bbox':[-1.8,-1,1.8,1],
-            'pins':[{'name':'PLUS','xy':[-1.8,0]},{'name':'MINUS','xy':[1.8,0]},{'name':'BANK<2:0>','xy':[0,-1]}],
+            'pins':[{'name':'PLUS','xy':[-1.8,0]},{'name':'MINUS','xy':[1.8,0]},{'name':'BANK<2:0>','xy':[0,1]}],
             'shapes':[{'kind':'rect','points':[-1.8,-1,1.8,1]}]}
-    node=add_instance(p,symbol,x=500,y=210);node['roles']={'PLUS':'P','MINUS':'N','BANK<0>':'BANK<0>','BANK<1>':'BANK<1>','BANK<2>':'BANK<2>'}
-    add_register(p,'BANK',3,'0:7',x=190,y=400)
-    for net,x in [('P',280),('N',720)]:
-        n=create_passive(p,'capq',x=x,y=400,props={'c':'100f','q':'80','fq':'1G'});n['roles']={'PLUS':net,'MINUS':'VSS'}
+    node=add_instance(p,symbol,x=700,y=220);node['roles']={'PLUS':'P','MINUS':'N','BANK<0>':'BANK<0>','BANK<1>':'BANK<1>','BANK<2>':'BANK<2>'}
+    add_register(p,'BANK',3,'0:7',x=250,y=750)
+    for net,x,y in [('P',700,1050),('N',1200,750)]:
+        n=create_passive(p,'capq',x=x,y=y,props={'c':'100f','q':'80','fq':'1G'});n['roles']={'PLUS':net,'MINUS':'VSS'}
     if resonator:
-        n=create_passive(p,'indq',x=500,y=540,props={'l':'2n','q':'1000000'});n['roles']={'PLUS':'P','MINUS':'N'}
+        n=create_passive(p,'indq',x=700,y=1500,props={'l':'2n','q':'1000000'});n['roles']={'PLUS':'P','MINUS':'N'}
     raw=spectrum(resonator);p['private']={'spectrum':raw,'spectrum_data_sha256':_hash(raw)}
     return p
 
@@ -59,7 +59,8 @@ def make_workbook():
     second=add_page(book,'Parallel LC resonance');second['id']='lc_resonance';second['project']=project(True)
     for page in book['pages']:
         p=page['project'];page['result']=cache(resample(p['private']['spectrum'],p['settings']['frequencies']),digest(p),'cartesian');page['result']['analysis']='sp'
-        page['axis']='BANK';page['editor']={'tab':'results','zoom':1,'pan':[0,0]}
+        page['axis']='BANK';page['editor']={'tab':'results','zoom':.5,'pan':[150,70]}
+        if p['demo_model']=='resonator':page['editor'].update(zoom=.35,pan=[200,35])
         page['measurement_view']='Resonance' if p['demo_model']=='resonator' else 'Capacitance'
     book['active_page']=first['id'];book['appearance']={'canvas':'black','plot':'black'}
     book['description']='Synthetic analytic replay only; no PDK or native simulation data. See examples/README.md.'

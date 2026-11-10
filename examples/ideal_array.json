@@ -18,8 +18,8 @@
             "library": "",
             "cell": "DEC -> BIN",
             "view": "schematic",
-            "x": 190,
-            "y": 400,
+            "x": 250,
+            "y": 750,
             "symbol": {
               "library": "",
               "cell": "DEC -> BIN",
@@ -111,8 +111,8 @@
             "library": "GENERIC",
             "cell": "Ideal switched C",
             "view": "schematic",
-            "x": 500,
-            "y": 210,
+            "x": 700,
+            "y": 220,
             "symbol": {
               "library": "GENERIC",
               "cell": "Ideal switched C",
@@ -141,7 +141,7 @@
                   "name": "BANK<2:0>",
                   "xy": [
                     0,
-                    -1
+                    1
                   ]
                 }
               ],
@@ -170,8 +170,8 @@
             "library": "analogLib",
             "cell": "capq",
             "view": "spectre",
-            "x": 280,
-            "y": 400,
+            "x": 700,
+            "y": 1050,
             "symbol": {
               "library": "analogLib",
               "cell": "capq",
@@ -230,8 +230,8 @@
             "library": "analogLib",
             "cell": "capq",
             "view": "spectre",
-            "x": 720,
-            "y": 400,
+            "x": 1200,
+            "y": 750,
             "symbol": {
               "library": "analogLib",
               "cell": "capq",
@@ -14244,7 +14244,7 @@
             }
           }
         ],
-        "digest": "647d626ebef43adac463a3cfee6fcc7459d1a30987c28f6d5aab3624a996d40d",
+        "digest": "0c1afb4a9fb427d6d1655c20f6f4ae4e570c8dad353227a45eeff877170a9666",
         "mode": "cartesian",
         "sha256": "2185dc249b325fc501954fd8ca5d005f3560dd460fef4e512cafab6f2aaff012",
         "analysis": "sp"
@@ -14252,10 +14252,10 @@
       "axis": "BANK",
       "editor": {
         "tab": "results",
-        "zoom": 1,
+        "zoom": 0.5,
         "pan": [
-          0,
-          0
+          150,
+          70
         ]
       },
       "measurement_view": "Capacitance"
@@ -14275,8 +14275,8 @@
             "library": "",
             "cell": "DEC -> BIN",
             "view": "schematic",
-            "x": 190,
-            "y": 400,
+            "x": 250,
+            "y": 750,
             "symbol": {
               "library": "",
               "cell": "DEC -> BIN",
@@ -14368,8 +14368,8 @@
             "library": "GENERIC",
             "cell": "Ideal switched C",
             "view": "schematic",
-            "x": 500,
-            "y": 210,
+            "x": 700,
+            "y": 220,
             "symbol": {
               "library": "GENERIC",
               "cell": "Ideal switched C",
@@ -14398,7 +14398,7 @@
                   "name": "BANK<2:0>",
                   "xy": [
                     0,
-                    -1
+                    1
                   ]
                 }
               ],
@@ -14427,8 +14427,8 @@
             "library": "analogLib",
             "cell": "capq",
             "view": "spectre",
-            "x": 280,
-            "y": 400,
+            "x": 700,
+            "y": 1050,
             "symbol": {
               "library": "analogLib",
               "cell": "capq",
@@ -14487,8 +14487,8 @@
             "library": "analogLib",
             "cell": "capq",
             "view": "spectre",
-            "x": 720,
-            "y": 400,
+            "x": 1200,
+            "y": 750,
             "symbol": {
               "library": "analogLib",
               "cell": "capq",
@@ -14547,8 +14547,8 @@
             "library": "analogLib",
             "cell": "indq",
             "view": "spectre",
-            "x": 500,
-            "y": 540,
+            "x": 700,
+            "y": 1500,
             "symbol": {
               "library": "analogLib",
               "cell": "indq",
@@ -28562,7 +28562,7 @@
             }
           }
         ],
-        "digest": "dcff2bc7bcc7b85e2977b89d31a10e43e3036ae7e8157711d5636bcbf4a6b85a",
+        "digest": "a5971e193221d5bde178ff4ffa25bbbb10e4394e18ac4026f4e2e841b6204915",
         "mode": "cartesian",
         "sha256": "c8aca387573f2ecfa7e0897d49a2536e47af591181511303395ac48e2bb5a5f5",
         "analysis": "sp"
@@ -28570,10 +28570,10 @@
       "axis": "BANK",
       "editor": {
         "tab": "results",
-        "zoom": 1,
+        "zoom": 0.35,
         "pan": [
-          0,
-          0
+          200,
+          35
         ]
       },
       "measurement_view": "Resonance"
