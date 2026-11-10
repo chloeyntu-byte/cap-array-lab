@@ -10,6 +10,7 @@ import os
 import re
 import sys
 
+HASH = re.compile(r'("[A-Za-z0-9_]*(?:sha|hash|digest)[A-Za-z0-9_]*"\s*:\s*")[0-9a-fA-F]{16,}(")')
 NUM = re.compile(r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?")
 
 
@@ -29,6 +30,9 @@ def main():
             if open(pa, "rb").read() != open(pb, "rb").read():
                 print("binary differs:", rel_path); bad += 1
             continue
+        # content hashes of generated files change whenever their last printed digit does; the files
+        # themselves are compared numerically, so mask the recorded hashes
+        ta, tb = HASH.sub(r"\1<hash>\2", ta), HASH.sub(r"\1<hash>\2", tb)
         sa, sb = NUM.split(ta), NUM.split(tb)
         if sa != sb:
             k = next((i for i, (x, y) in enumerate(zip(sa, sb)) if x != y), min(len(sa), len(sb)))
