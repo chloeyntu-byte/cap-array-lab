@@ -39,4 +39,7 @@ jobs:
       - name: Cap Array Lab and Z11 tests
         run: xvfb-run -a python -B -m unittest discover -s tests -p 'test_*.py'
       - name: Synthetic examples rebuild
-        run: python -B -m caplab.demo && git diff --exit-code -- examples
+        run: |
+          cp -r examples "$RUNNER_TEMP/examples-committed"
+          python -B -m caplab.demo
+          python scripts/compare_numeric_tree.py "$RUNNER_TEMP/examples-committed" examples
