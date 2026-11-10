@@ -154,7 +154,7 @@ def runtime_dialog(app):
             if pid == app.book['active_page']: app.refresh_source_label(); app.update_result_label()
             win.destroy()
         except (ValueError, TypeError) as exc: app.error(str(exc), page_id=pid)
-    ttk.Button(outer, text='Apply to this page', command=apply, style='Accent.TButton').pack(side='bottom', fill='x', pady=(8, 0))
+    ttk.Button(outer, text='Apply to this page', command=apply, style='Primary.TButton').pack(side='bottom', fill='x', pady=(8, 0))
     app.runtime_window = win; app.runtime_fields = fields; app.runtime_apply = apply
 
 
@@ -222,7 +222,7 @@ def show_hierarchy(app, hierarchy, project, pid):
             app.status.set('Placed ' + row['path'] + ' with source config bindings.'); app.log('Placed source occurrence ' + row['path'])
         app.task(lambda b: b.symbol(b.context(current), row['raw_library'], row['raw_cell']), loaded, pid, label='Load hierarchy symbol ' + row['raw_cell'])
     bar = ttk.Frame(box); bar.pack(fill='x', pady=(8, 0))
-    ttk.Button(bar, text='Place selected symbol', command=place, style='Accent.TButton').pack(side='right')
+    ttk.Button(bar, text='Place selected symbol', command=place, style='Primary.TButton').pack(side='right')
     ttk.Button(bar, text='Open source config in Virtuoso', command=app.open_source_config).pack(side='left')
     tree.bind('<Double-1>', lambda e: place())
     app.hierarchy_window = win; app.hierarchy_tree = tree; app.hierarchy_place = place; app.hierarchy_records = records

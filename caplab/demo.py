@@ -59,7 +59,7 @@ def make_workbook():
     second=add_page(book,'Parallel LC resonance');second['id']='lc_resonance';second['project']=project(True)
     for page in book['pages']:
         p=page['project'];page['result']=cache(resample(p['private']['spectrum'],p['settings']['frequencies']),digest(p),'cartesian');page['result']['analysis']='sp'
-        page['axis']='BANK';page['editor']={'tab':'results','zoom':.5,'pan':[150,70]}
+        page['axis']='BANK';page['editor']={'tab':'results','zoom':.45,'pan':[135,35]}
         if p['demo_model']=='resonator':page['editor'].update(zoom=.35,pan=[200,35])
         page['measurement_view']='Resonance' if p['demo_model']=='resonator' else 'Capacitance'
     book['active_page']=first['id'];book['appearance']={'canvas':'black','plot':'black'}
