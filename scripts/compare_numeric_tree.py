@@ -29,8 +29,11 @@ def main():
             if open(pa, "rb").read() != open(pb, "rb").read():
                 print("binary differs:", rel_path); bad += 1
             continue
-        if NUM.split(ta) != NUM.split(tb):
-            print("text differs:", rel_path); bad += 1; continue
+        sa, sb = NUM.split(ta), NUM.split(tb)
+        if sa != sb:
+            k = next((i for i, (x, y) in enumerate(zip(sa, sb)) if x != y), min(len(sa), len(sb)))
+            ctx = lambda parts: "".join(parts[max(0, k - 2):k + 3])[:160]
+            print("text differs: %s\n  expected: %r\n  actual:   %r" % (rel_path, ctx(sa), ctx(sb))); bad += 1; continue
         for x, y in zip(NUM.findall(ta), NUM.findall(tb)):
             if x != y and not math.isclose(float(x), float(y), rel_tol=rel, abs_tol=1e-15):
                 print("number differs: %s %s != %s" % (rel_path, x, y)); bad += 1; break
