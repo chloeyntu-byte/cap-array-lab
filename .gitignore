@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.bak*
+*.log
+*.orig
+*.rej
+.work/
+runs/
+.venv/
+caplab/z11/saved_state/
+caplab/z11/saved_structures/

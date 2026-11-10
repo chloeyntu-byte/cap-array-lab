@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+z11_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
+z11_python="${Z11_PYTHON:-python3}"
+unset LD_LIBRARY_PATH PYTHONPATH PYTHONHOME TCL_LIBRARY TK_LIBRARY QT_PLUGIN_PATH
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONIOENCODING=utf-8
+cd "$z11_dir"
+if [[ $# -gt 0 ]]; then
+    exec "$z11_python" "$z11_dir/z11_integration.py" --maestro-context-file "$1"
+fi
+exec "$z11_python" "$z11_dir/z11_integration.py"

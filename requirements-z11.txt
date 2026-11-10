@@ -1,0 +1,4 @@
+# Optional; the core Cap Array Lab workbench only needs Python and Tk.
+numpy>=1.17
+matplotlib>=3.3
+# CMA-ES is optional; install cma separately if that optimizer is selected.
