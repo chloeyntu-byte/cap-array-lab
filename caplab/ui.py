@@ -32,18 +32,20 @@ from .config_state import capture_saved_config, record_config_baseline
 from .rf_ui import RFControls
 from .pointlogs import PointLogBrowser, open_row_log
 from .resonance_view import ResonanceView, resonance_data
+from .tank_view import TankView
+from .tank_scan import tank_data, tank_settings, backend_mode
 
 BG=fw.BG;PANEL=fw.PANEL;INK=fw.TEXT;MUTED=fw.DIM;ACCENT=fw.accent('cap')
 
 
 class App(tk.Tk):
-    def __init__(self,project=None,launch_context=None):
-        super().__init__();self.tk.call('tk','scaling',1.2)
+    def __init__(self,project=None,launch_context=None,tank=False):
+        super().__init__();self.tk.call('tk','scaling',1.2);self.tank_app=bool(tank)
         families=set(tkfont.families(self))
         self.font_family=next((x for x in ('Liberation Sans','Carlito','PT Sans','DejaVu Sans') if x in families),tkfont.nametofont('TkDefaultFont').actual('family'))
         for fontname in ('TkDefaultFont','TkTextFont'):
             tkfont.nametofont(fontname).configure(family=self.font_family,size=10)
-        self.title('Cap Array Lab — Untitled workbook');self.configure(bg=BG)
+        self.title(('Tank Scan Lab' if self.tank_app else 'Cap Array Lab')+' — Untitled workbook');self.configure(bg=BG)
         sw,sh=self.winfo_screenwidth(),self.winfo_screenheight()
         self.small_screen=sw<1200 or sh<870
         if self.small_screen:
@@ -66,6 +68,7 @@ class App(tk.Tk):
         self.bind('<Control-e>',lambda e:self.open_native_config());self.bind('<Control-b>',lambda e:self.binding_dialog())
         self.protocol('WM_DELETE_WINDOW',self.close)
         self.after(40,self.poll);self.after(150,self.redraw);self.after(200,self.load_libraries)
+        if self.tank_app:self.after_idle(self.layout_side_panels)
 
     @property
     def busy(self):return bool(self.jobs)
@@ -76,6 +79,9 @@ class App(tk.Tk):
         self.font_family=tkfont.nametofont('TkDefaultFont').actual('family')
         style=ttk.Style(self)
         style.configure('Muted.TLabel',foreground=fw.DIM)
+        if self.tank_app:
+            from .tank_view import ensure_styles
+            ensure_styles(self);CQPlot.FONT=self.font_family
 
     def _screen_surface(self):
         self.surface=self
@@ -96,9 +102,13 @@ class App(tk.Tk):
 
     def _layout(self):
         def global_actions(box):
+            if self.tank_app:
+                self.side_toggle=ttk.Button(box,text='Show setup panels',style='Ghost.TButton',command=self.toggle_side_panels)
+                self.side_toggle.pack(side='left',padx=4)
             for label,fn in [('New workbook',self.new),('Open workbook',self.open),('Save workbook',self.save)]:
                 ttk.Button(box,text=label,command=fn).pack(side='left',padx=4)
-        fw.header(self.surface,'Cap Array Lab','C/Q and resonance',product='cap',right=global_actions).pack(fill='x')
+        if self.tank_app:fw.header(self.surface,'Tank Scan Lab','N-port + cap array + gm: f0, Rp, gm, startup gain',product='cap',right=global_actions).pack(fill='x')
+        else:fw.header(self.surface,'Cap Array Lab','C/Q and resonance',product='cap',right=global_actions).pack(fill='x')
         top=self.surface
         pages=ttk.Frame(self.surface,padding=(12,0,12,5));pages.pack(fill='x')
         for label,fn in [('New page',self.new_page),('Rename',self.rename_current_page),('Duplicate',self.copy_page),('Delete',self.delete_current_page)]:ttk.Button(pages,text=label,command=fn,style='Danger.TButton' if label=='Delete' else 'TButton').pack(side='right',padx=3)
@@ -107,6 +117,7 @@ class App(tk.Tk):
         main=ttk.Panedwindow(self.surface,orient='horizontal');self.main_panes=main;main.pack(fill='both',expand=True,padx=12,pady=(0,5))
         left=ttk.Frame(main,padding=16,width=215,style='Panel.TFrame');center=ttk.Frame(main);right_outer=ttk.Frame(main,width=325)
         main.add(left,weight=0);main.add(center,weight=1);main.add(right_outer,weight=0)
+        self.mainpane,self.leftpane,self.centerpane,self.rightpane=main,left,center,right_outer;self.side_override=None
         fw.section(left,'Design libraries').pack(anchor='w',pady=(0,8))
         ttk.Button(left,text='Load library...',command=self.library_dialog).pack(fill='x',pady=(0,7))
         self.libvar=tk.StringVar(value=self.project['library']);self.libcombo=ttk.Combobox(left,textvariable=self.libvar,state='readonly',width=21)
@@ -127,6 +138,7 @@ class App(tk.Tk):
         self.tabs=ttk.Notebook(center);self.tabs.pack(fill='both',expand=True)
         self.editor=ttk.Frame(self.tabs);self.resultpage=ttk.Frame(self.tabs)
         self.tabs.add(self.editor,text='Circuit canvas');self.tabs.add(self.resultpage,text='Measurement results')
+        if self.tank_app:self.tabs.bind('<<NotebookTabChanged>>',lambda e:self.layout_side_panels())
         toolbar=ttk.Frame(self.editor,padding=5);toolbar.pack(fill='x')
         for label,fn in [('Fit',self.fit),('Undo',self.undo),('Delete',self.delete_selection),('Wire (W)',lambda:self.canvas_tools.activate('wire')),('Junction (J)',lambda:self.canvas_tools.activate('junction')),('Rotate (R)',lambda:self.canvas_tools.command('r'))]:ttk.Button(toolbar,text=label,command=fn,style='Danger.TButton' if label=='Delete' else 'Ghost.TButton').pack(side='left',padx=2)
         themebar=ttk.Frame(self.editor,padding=(6,0,6,3));themebar.pack(fill='x')
@@ -153,8 +165,10 @@ class App(tk.Tk):
         right.bind('<Configure>',lambda e:scroll.configure(scrollregion=scroll.bbox('all')));scroll.bind('<Configure>',lambda e:scroll.itemconfigure(window,width=e.width))
         fw.section(right,'SP sweep').pack(anchor='w')
         self.decomp_enabled=tk.BooleanVar(value=bool(self.project['settings'].get('decomposition',True)))
-        ttk.Checkbutton(right,text='Separate coupling / ground',variable=self.decomp_enabled,command=self.update_result_label).pack(anchor='w',pady=(3,0))
-        ttk.Label(right,text='Two-port SP; original DC bias preserved.',style='Muted.TLabel').pack(anchor='w',pady=(0,3))
+        if not self.tank_app:
+            ttk.Checkbutton(right,text='Separate coupling / ground',variable=self.decomp_enabled,command=self.update_result_label).pack(anchor='w',pady=(3,0))
+            ttk.Label(right,text='Two-port SP; original DC bias preserved.',style='Muted.TLabel').pack(anchor='w',pady=(0,3))
+        else:ttk.Label(right,text='Two-port SP with module currents; DC bias preserved.',style='Muted.TLabel').pack(anchor='w',pady=(3,3))
         self.fields={}
         for key,label,default in [('simulation_start','Start (Hz)','100M'),('simulation_stop','Stop (Hz)','50G'),('simulation_points','Frequency samples','301')]:
             row=ttk.Frame(right);row.pack(fill='x',pady=3);ttk.Label(row,text=label,width=19).pack(side='left')
@@ -162,11 +176,14 @@ class App(tk.Tk):
         self.fields['simulation_sweep']=tk.StringVar(value=self.project['settings'].get('simulation_sweep','log'))
         row=ttk.Frame(right);row.pack(fill='x',pady=3);ttk.Label(row,text='Spacing',width=19).pack(side='left')
         ttk.Combobox(row,textvariable=self.fields['simulation_sweep'],values=['log','linear'],state='readonly',width=12).pack(side='right',fill='x',expand=True)
-        ttk.Label(right,text='Observe at (Hz)',style='Muted.TLabel').pack(anchor='w',pady=(8,3))
         self.fields['frequencies']=tk.StringVar(value=self.project['settings']['frequencies'])
-        ttk.Entry(right,textvariable=self.fields['frequencies']).pack(fill='x')
-        self.applybutton=ttk.Button(right,text='Apply observation frequencies',command=self.apply_observations);self.applybutton.pack(fill='x',pady=4)
-        ttk.Label(right,text='Apply reuses the saved SP spectrum.\nNo new simulation inside the saved range.',style='Muted.TLabel').pack(anchor='w')
+        observe=ttk.Frame(right);self.applybutton=ttk.Button(observe,text='Apply observation frequencies',command=self.apply_observations)
+        if not self.tank_app:
+            observe.pack(fill='x')
+            ttk.Label(observe,text='Observe at (Hz)',style='Muted.TLabel').pack(anchor='w',pady=(8,3))
+            ttk.Entry(observe,textvariable=self.fields['frequencies']).pack(fill='x')
+            self.applybutton.pack(fill='x',pady=4)
+        if not self.tank_app:ttk.Label(right,text='Apply reuses the saved SP spectrum.\nNo new simulation inside the saved range.',style='Muted.TLabel').pack(anchor='w')
         row=ttk.Frame(right);row.pack(fill='x',pady=(8,3));ttk.Label(row,text='VDD (V)',width=19).pack(side='left')
         self.fields['vdd']=tk.StringVar(value=str(self.project['settings']['vdd']));ttk.Entry(row,textvariable=self.fields['vdd'],width=12).pack(side='right',fill='x',expand=True)
         ttk.Label(right,text='Decimal registers',font=(self.font_family,11,'bold')).pack(anchor='w',pady=(12,5))
@@ -217,8 +234,8 @@ class App(tk.Tk):
     def _result_layout(self):
         modebar=ttk.Frame(self.resultpage,padding=6);modebar.pack(fill='x')
         ttk.Label(modebar,text='Measurement mode').pack(side='left')
-        self.measurement_view=tk.StringVar(value=self.page().get('measurement_view','Capacitance'))
-        self.measurement_combo=ttk.Combobox(modebar,textvariable=self.measurement_view,values=['Capacitance','Resonance'],state='readonly',width=16)
+        self.measurement_view=tk.StringVar(value=self.page().get('measurement_view',self.default_view()))
+        self.measurement_combo=ttk.Combobox(modebar,textvariable=self.measurement_view,values=['Capacitance','Resonance','Tank scan'],state='readonly',width=16)
         self.measurement_combo.pack(side='left',padx=7);self.measurement_combo.bind('<<ComboboxSelected>>',lambda e:self.update_measurement_view())
         self.cap_resultframe=ttk.Frame(self.resultpage);self.cap_resultframe.pack(fill='both',expand=True)
         top=ttk.Frame(self.cap_resultframe,padding=8);top.pack(fill='x')
@@ -245,15 +262,31 @@ class App(tk.Tk):
         self.table_panel=ResultsTable(self.cap_resultframe,on_select=lambda row:self.summary.set_row(row,self.result_names()),on_log=lambda row:open_row_log(self,row));self.table_panel.pack(fill='x',padx=7,pady=(1,5));self.table=self.table_panel.tree
 
         self.resonance_view=ResonanceView(self.resultpage,self)
+        self.tank_view=TankView(self.resultpage,self)
+
+    def default_view(self):return 'Tank scan' if self.tank_app else 'Capacitance'
 
     def update_measurement_view(self):
         mode=self.measurement_view.get();page=self.page();page['measurement_view']=mode
-        self.runbutton.configure(text='Run / Measure resonance + loss' if mode=='Resonance' else 'Run SP / Measure C + Q')
-        if mode!='Resonance':
-            self.resonance_revision+=1;self.resonance_view.pack_forget();self.cap_resultframe.pack(fill='both',expand=True);return
-        self.cap_resultframe.pack_forget();self.resonance_view.pack(fill='both',expand=True)
+        self.runbutton.configure(text={'Resonance':'Run / Measure resonance + loss','Tank scan':'Run tank scan'}.get(mode,'Run SP / Measure C + Q'))
         self.resonance_revision+=1;revision=self.resonance_revision;pid=page['id']
+        if mode=='Capacitance':
+            self.resonance_view.pack_forget();self.tank_view.pack_forget();self.cap_resultframe.pack(fill='both',expand=True);return
+        self.cap_resultframe.pack_forget()
         project=page.get('run_project') or page['project'];private=project.get('private') or {}
+        if mode=='Tank scan':
+            self.resonance_view.pack_forget();self.tank_view.pack(fill='both',expand=True)
+            settings=tank_settings(page,project)
+            def tank_done(data):
+                if self.book['active_page']==pid and self.resonance_revision==revision and self.measurement_view.get()=='Tank scan':
+                    self.tank_view.set_data(data,project['settings'].get('sweep_mode','cartesian'),self.plot_theme.get().lower())
+            def tank_failed(message):
+                if self.book['active_page']==pid and self.resonance_revision==revision:
+                    self.tank_view.set_data({'rows':[],'names':[],'mode':backend_mode(settings),'issues':[],'message':'Tank analysis failed: '+message},theme=self.plot_theme.get().lower())
+            if not (private.get('spectrum') or {}).get('rows'):tank_done(tank_data(project,settings));return
+            self.tank_view.set_data({'rows':[],'names':[],'mode':backend_mode(settings),'issues':[],'message':'Analyzing saved sweep and native module currents...'},theme=self.plot_theme.get().lower())
+            self.task(lambda b:tank_data(project,settings),tank_done,pid,label='Tank scan analysis',failed=tank_failed);return
+        self.tank_view.pack_forget();self.resonance_view.pack(fill='both',expand=True)
         key=(private.get('folder'),private.get('history'),private.get('spectrum_sha256'))
         if not all(key):key=None
         def done(data):
@@ -266,6 +299,21 @@ class App(tk.Tk):
         if not (private.get('spectrum') or {}).get('rows'):done(resonance_data(project));return
         self.resonance_view.set_data({'rows':[],'names':[],'losses':{},'message':'Reading saved sweep and native loss data...'},theme=self.plot_theme.get().lower())
         self.task(lambda b:resonance_data(project),done,pid,label='Read resonance and module losses')
+
+    def layout_side_panels(self):
+        """Tank app: results tab uses the full width unless the user pinned the panels open."""
+        if not self.tank_app:return
+        show=self.side_override if self.side_override is not None else self.tabs.select()!=str(self.resultpage)
+        panes=[str(x) for x in self.mainpane.panes()]
+        if show and str(self.leftpane) not in panes:
+            self.mainpane.insert(0,self.leftpane,weight=0);self.mainpane.add(self.rightpane,weight=0)
+        elif not show and str(self.leftpane) in panes:
+            self.mainpane.forget(self.leftpane);self.mainpane.forget(self.rightpane)
+        self.side_toggle.configure(text='Hide setup panels' if show else 'Show setup panels')
+
+    def toggle_side_panels(self):
+        panes=[str(x) for x in self.mainpane.panes()]
+        self.side_override=str(self.leftpane) not in panes;self.layout_side_panels()
 
     def page(self,ident=None):
         ident=ident or self.book['active_page'];return next((p for p in self.book['pages'] if p['id']==ident),None)
@@ -430,7 +478,7 @@ class App(tk.Tk):
         self.modevar.set('Synchronous' if self.project['settings'].get('sweep_mode')=='synchronous' else 'Cartesian')
         self.decomp_enabled.set(bool(self.project['settings'].get('decomposition',True)));self.componentvar.set(p.get('component','Total P-N'))
         self.libvar.set(self.project['library']);state=p.get('editor',{});self.selected=state.get('selected');self.zoom=state.get('zoom',1.);self.pan=state.get('pan',[0.,0.])[:];self.undo_stack=[]
-        self.measurement_view.set(p.get('measurement_view','Capacitance'))
+        self.measurement_view.set(p.get('measurement_view',self.default_view()))
         self._field_loading=False;self.fill_pins();self.table_panel.set_rows([]);self.restore_results();self.draw_plots();self.redraw();self.refresh_progress();self.refresh_log();self.load_libraries()
         self.tabs.select(self.resultpage if state.get('tab')=='results' else self.editor)
         self.refresh_source_label();self.update_measurement_view()
@@ -640,6 +688,7 @@ class App(tk.Tk):
         if hasattr(self,'resonance_view'):
             self.resonance_view.plot.set_theme(self.plot_theme.get().lower())
             self.resonance_view.wave_plot.set_theme(self.plot_theme.get().lower())
+        if hasattr(self,'tank_view'):self.tank_view.plot.set_theme(self.plot_theme.get().lower())
 
     def transform(self,node,x,y):
         x,y=node_rotation_transform(node,x,y)
@@ -760,8 +809,23 @@ class App(tk.Tk):
         if self.project.get('demo_model'):
             self.capture_fields(strict=False);self.replay_example();return
         if pid in self.sim_jobs:self.status.set('This page is already running. Other pages remain available.');return
-        if self.measurement_view.get()=='Resonance':
+        view=self.measurement_view.get()
+        if view in ('Resonance','Tank scan'):
             self.project['settings']['capture_loss']=True;self.decomp_enabled.set(True)
+        if view=='Tank scan':
+            try:
+                from .spectrum import simulation_grid
+                from .model import number
+                start,stop=number(self.fields['simulation_start'].get()),number(self.fields['simulation_stop'].get())
+                if not all(start<=f<=stop for f in frequencies(self.fields['frequencies'].get())):
+                    self.fields['frequencies'].set('{:.6g}'.format(math.sqrt(start*stop)))
+            except ValueError:pass
+            settings=tank_settings(self.page(pid),self.project);ref=self.tank_view.store_ref()
+            if backend_mode(settings)=='active' and ref:self.project['settings']['tank_gm_ref']=ref
+            else:self.project['settings'].pop('tank_gm_ref',None)
+            from .tank_scan import check_roles
+            for issue in check_roles(settings):self.log('Tank roles: '+issue,'warning',pid)
+        else:self.project['settings'].pop('tank_gm_ref',None)
         try:cfg=self.sync()
         except Exception as ex:self.error(str(ex));return
         libs=self.catalog_cache.get(self.context_key(self.project),self.libs)
@@ -1097,7 +1161,7 @@ class App(tk.Tk):
         if self.jobs:
             if not messagebox.askyesno('Close workbench','Stop pending work and close the workbench?',parent=self):return
             for job in list(self.jobs.values()):job['backend'].stop()
-        try:self.capture_config_edits();self.stash_page();save_project(ROOT/'.work/last_session.json',self.book)
+        try:self.capture_config_edits();self.stash_page();save_project(ROOT/'.work'/('last_session_tank.json' if self.tank_app else 'last_session.json'),self.book)
         except (OSError,ValueError):pass
         self.closing=True
         try:

@@ -45,7 +45,9 @@ def resonance_data(project):
     for key,samples in sorted(groups.items()):
         identity={name:samples[0][name] for name in names}
         identity.update({'point':key} if 'point' in samples[0] else {'code':key})
-        try:found=find_first_resonance(samples)
+        try:
+            from .tank_scan import sweep_samples,sweep_start
+            found=find_first_resonance(sweep_samples(samples,sweep_start(project)))
         except (ValueError,KeyError) as ex:found={'available':False,'reason':'Full two-port sweep required: '+str(ex)}
         row=dict(identity,frequency_Hz=None,Z_real_ohm=None,Z_imag_ohm=None,Z_abs_ohm=None,kind='',status=found.get('reason',''))
         if found['available']:

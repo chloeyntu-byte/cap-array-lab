@@ -11,6 +11,8 @@ THEMES={
 
 
 class CQPlot(tk.Canvas):
+    FONT='DejaVu Sans'
+    hide_single_legend=False
     def __init__(self,parent,**kwargs):
         kwargs.setdefault('highlightthickness',0);kwargs.setdefault('background',fw.PLOT_BG);kwargs.setdefault('height',350)
         super().__init__(parent,**kwargs)
@@ -37,7 +39,7 @@ class CQPlot(tk.Canvas):
         w,h=self.winfo_width(),self.winfo_height();theme=THEMES[self.theme]
         if w<30 or h<30:return
         if not self.rows:
-            self.create_text(w/2,h/2,text=getattr(self,'empty_message','Run an SP sweep to see C / Q data.'),fill=theme['muted'],font=('DejaVu Sans',14));return
+            self.create_text(w/2,h/2,text=getattr(self,'empty_message','Run an SP sweep to see C / Q data.'),fill=theme['muted'],font=(self.FONT,14));return
         axis=self.axis if self.axis in self.rows[0] else ('point' if 'point' in self.rows[0] else 'code')
         groups=curve_groups(self.rows,axis,self.names,self.mode,self.filters,self.include_frequency)
         keys=[label for label,_ in groups]
@@ -47,11 +49,12 @@ class CQPlot(tk.Canvas):
         metrics=self.metrics or [('C_F',titles[0],1e15,'fF'),('Q',titles[1],1,'')]
         for panel,(metric,title,scale,unit) in enumerate(metrics):
             half=w/2;left=panel*half;x0=left+82;x1=left+half-20;y1=h-65
-            legend_lines=min(4,len(groups));y0=min(95+legend_lines*17,max(100,y1-100))
-            self.create_text(left+half/2,22,text=title,fill=theme['ink'],font=('DejaVu Sans',15,'bold'))
+            single=self.hide_single_legend and len(groups)==1
+            legend_lines=0 if single else min(4,len(groups));y0=min(50 if single else 95+legend_lines*17,max(50 if single else 100,y1-100))
+            self.create_text(left+half/2,22,text=title,fill=theme['ink'],font=(self.FONT,15,'bold'))
             data=[row for _,series in groups for row in series if row.get(metric) is not None and math.isfinite(row[metric])]
             if not data:
-                self.create_text(left+half/2,h/2,text='No matching data / Q undefined',fill=theme['muted'],font=('DejaVu Sans',12));continue
+                self.create_text(left+half/2,h/2,text='No matching data / Q undefined',fill=theme['muted'],font=(self.FONT,12));continue
             xmin=min(r[axis] for r in data);xmax=max(r[axis] for r in data)
             ymin=min(r[metric]*scale for r in data);ymax=max(r[metric]*scale for r in data)
             yr=ymax-ymin
@@ -63,11 +66,11 @@ class CQPlot(tk.Canvas):
             for tick in range(5):
                 y=y1-(y1-y0)*tick/4;x=x0+(x1-x0)*tick/4
                 self.create_line(x0,y,x1,y,fill=theme['grid'])
-                self.create_text(x0-9,y,text='{:.4g}'.format(ymin+(ymax-ymin)*tick/4),anchor='e',fill=theme['muted'],font=('DejaVu Sans',11))
-                self.create_text(x,y1+20,text='{:.4g}'.format(xmin+(xmax-xmin)*tick/4),fill=theme['muted'],font=('DejaVu Sans',11))
+                self.create_text(x0-9,y,text='{:.4g}'.format(ymin+(ymax-ymin)*tick/4),anchor='e',fill=theme['muted'],font=(self.FONT,11))
+                self.create_text(x,y1+20,text='{:.4g}'.format(xmin+(xmax-xmin)*tick/4),fill=theme['muted'],font=(self.FONT,11))
             self.create_line(x0,y0,x0,y1,x1,y1,fill=theme['ink'])
             xlabel='Frequency (GHz)' if axis=='frequency_GHz' else 'Scan point (index)' if axis=='point' else 'Decimal code' if axis=='code' else axis+' (decimal)'
-            self.create_text((x0+x1)/2,h-20,text=xlabel,fill=theme['ink'],font=('DejaVu Sans',12))
+            self.create_text((x0+x1)/2,h-20,text=xlabel,fill=theme['ink'],font=(self.FONT,12))
             for index,(label,series) in enumerate(groups):
                 tag='curve:'+str(index);chosen=self.selected==label
                 color=fw.accent('cap') if chosen else theme['colors'][index%len(theme['colors'])]
@@ -79,11 +82,11 @@ class CQPlot(tk.Canvas):
                     x,y=xy(row);radius=4.5 if chosen else 3
                     self.create_oval(x-radius,y-radius,x+radius,y+radius,fill=color,outline=color,tags=(tag,'curve'))
                     self.points.append(dict(curve=label,row=row,metric=metric,x=x,y=y,scale=scale,unit=unit,title=title))
-                if index<4:
+                if index<4 and not single:
                     y=49+index*17
                     self.create_line(x0,y,x0+21,y,fill=color,width=4 if chosen else 2,tags=(tag,'curve'))
-                    self.create_text(x0+28,y,text=label,fill=color,anchor='w',font=('DejaVu Sans',11,'bold' if chosen else 'normal'),tags=(tag,'curve'))
-            if len(groups)>4:self.create_text(x1,49,text='{} curves - use Slice'.format(len(groups)),anchor='e',fill=theme['muted'],font=('DejaVu Sans',11))
+                    self.create_text(x0+28,y,text=label,fill=color,anchor='w',font=(self.FONT,11,'bold' if chosen else 'normal'),tags=(tag,'curve'))
+            if len(groups)>4:self.create_text(x1,49,text='{} curves - use Slice'.format(len(groups)),anchor='e',fill=theme['muted'],font=(self.FONT,11))
         self.curve_labels=keys
 
     def select_at(self,event):
@@ -109,7 +112,7 @@ class CQPlot(tk.Canvas):
         value=row[p['metric']]*p['scale'];unit=p['unit'];metric=('C' if p['metric']=='C_F' else 'Q') if self.metrics is None else p['title']
         self.tooltip_text='{}\nf = {:.9g} GHz   {} = {:.9g} {}\n{}'.format(self.selected,row['frequency_Hz']/1e9,metric,value,unit,names)
         theme=THEMES[self.theme]
-        text=self.create_text(0,0,text=self.tooltip_text,anchor='nw',fill=theme['ink'],font=('DejaVu Sans',11),
+        text=self.create_text(0,0,text=self.tooltip_text,anchor='nw',fill=theme['ink'],font=(self.FONT,11),
                               width=max(80,min(430,self.winfo_width()-30)),tags=('tooltip',))
         bounds=self.bbox(text);width,height=bounds[2]-bounds[0],bounds[3]-bounds[1]
         x=max(8,min(event.x+17,self.winfo_width()-width-10));y=max(8,min(event.y-80,self.winfo_height()-height-10))

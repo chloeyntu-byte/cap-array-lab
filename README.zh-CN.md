@@ -1,13 +1,14 @@
 [English](README.md)
 
-# Cap Array Lab
+# Tank Scan Lab
 
-电容阵列桌面测量工作台，支持 C/Q、浮地端口寄生分解与 RF 谐振分析，内含 Z11 Studio。
+LC 谐振腔起振分析桌面工作台：在画布上放 N-port 电感、开关电容阵列和交叉耦合 gm，一次小信号运行即可读出 f0、Rp、gm/gds 和起振增益。同时保留电容阵列 C/Q 测量、浮地端口寄生分解、RF 谐振分析和 Z11 Studio。本项目原名 Cap Array Lab。
 
-![Cap Array Lab 结果](docs/screenshots/04-cq-results.png)
+![Tank Scan Lab 结果](docs/screenshots/08-tank-scan.png)
 
 ## 功能
 
+- **Tank scan：** 勾选画布包含的内容（电感 / N-port、电容阵列、gm 核心）来选择无源或有源分析。逐码给出 f0、仅 LC 的 f0、Rp(LC)、Rp(LC+loading)、端口 gm/gds、负电导、起振裕量、gm·Rp、Q 及各模块损耗占比，见 [docs/TANK_SCAN.md](docs/TANK_SCAN.md)。
 - 在画布搭电路，通过同名网络或连线连接，按十进制寄存器逐码扫描，工作簿各页独立。
 - 查看逐码电容与 Q，分解 coupling、ground-path 等效支路及浮地 P/N 总导纳。
 - 复用已保存的频谱，调整观察频率，查看首个谐振点以及 Z11 幅相。
@@ -30,6 +31,14 @@ Z11 Studio 另需 NumPy 1.17+、Matplotlib 3.3+。CMA-ES 优化可选安装 `cma
 ```bash
 python3 app.py --project examples/ideal_array.json
 ```
+
+Tank scan 可打开合成示例（解析电感、开关电容和交叉耦合 gm，共四个码）：
+
+```bash
+python3 app.py --tank --project examples/ideal_tank.json
+```
+
+`bash tank-scan-lab.sh` 直接以 **Tank scan** 模式启动。修改角色或勾选内容只会重新分析已保存的数据；运行新的 tank scan 需要用户自己的原生环境。
 
 也可以运行 `bash launch.sh` 后点击 **Load example**。选择 **Ideal capacitor array** 查看 C/Q，选择 **Parallel LC resonance → Measurement results → Z11 vs frequency** 查看阻抗幅相。示例页中的 **Run SP / Measure C + Q** 执行解析模型回放，状态栏明确标注 synthetic replay；**Stop this page** 可停止。回放使用固定的八码模型和频率网格，编辑画布不会改变模型。开展原生测量时请新建工作簿。
 
@@ -66,23 +75,26 @@ Cadence 与许可证环境由用户提供。GUI 启动会隔离 Python/Tk 库覆
 ```bash
 python3 app.py --help
 python3 app.py --project examples/ideal_array.json
+python3 app.py --tank --project examples/ideal_tank.json
 python3 -m caplab.demo
+python3 -m caplab.tank_example
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
-`caplab.demo` 重新生成两个合成示例文件。`--context` 为 Maestro 内部启动上下文入口，不是通用网表运行器。无 `DISPLAY` 时 Tk 测试会跳过；完整 UI 测试须使用分配给你的显示。完整测试包含依赖 NumPy 的 Z11 用例。没有无图形的原生仿真 CLI。
+`caplab.demo` 重新生成两个 C/Q 合成示例文件，`caplab.tank_example` 重新生成 `examples/ideal_tank.json`。`--context` 为 Maestro 内部启动上下文入口，不是通用网表运行器。无 `DISPLAY` 时 Tk 测试会跳过；完整 UI 测试须使用分配给你的显示。完整测试包含依赖 NumPy 的 Z11 用例。没有无图形的原生仿真 CLI。
 
 ## 限制
 
+- Tank scan 的数值是 DC 工作点上的小信号结果，对应起振条件；稳态摆幅、增益压缩和相噪需要大信号（HB/瞬态）仿真。f0 处的数值在相邻两个采样点之间插值，需要更高精度时请在 f0 附近收窄扫频。
 - 保存频谱按复导纳线性插值，不外推；粗网格可能漏掉窄带或高 Q 谐振。
 - 浮地 P/N 分解是端口等效量，不是物理电容清单；各部分 Q 不可相加。
-- 模块损耗占比需要完整且通过功率平衡的原生电流数据；合成示例明确显示不可用。
+- 模块损耗占比需要完整且通过功率平衡的原生电流数据；C/Q 合成示例明确显示不可用，tank 合成示例包含模块电流。
 - 用户工作簿可能包含本地路径、库身份及结果，分享前自行检查。运行状态放在被忽略的 `.work/`、`runs/` 中；Z11 另有自身保存状态。
 - 工具不做 DRC/LVS 签核。Touchstone 导入支持指定的全矩阵 ASCII S 参数格式；不支持的关键字、已被修改的源文件会被拒绝。
 
 ## RF-FIELDWORK
 
-产品介绍页：https://rf-fieldwork.pages.dev/cap/?lang=zh（含配音演示片的工具在页面上可直接观看）
+产品介绍页：https://rf-fieldwork.pages.dev/tank/?lang=zh（含配音演示片的工具在页面上可直接观看）
 
 其他开源工具：
 

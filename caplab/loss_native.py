@@ -213,52 +213,13 @@ def combine_records(differential, common, plan):
     return out
 
 
-def evaluate_sample(rows, plan, frequency, groups=None, overrides=None):
-    """Calculate native sample powers or interpolate independently balanced powers.
+def reconstruct_sample(sample, plan, f=None):
+    """Normalize one native sample to a floating 1 A peak DUT drive.
 
-    groups maps each coupled instance ID to a common group label. A loss-power
-    override may replace a measured net terminal power for a verified device
-    model (e.g. series-R inductor); use paired overrides for every member of a
-    coupled block, and always check total power balance.
+    Returns the P/N voltages, normalized module pin phasors and fixture/source
+    powers, or an unavailable result. Shared by loss accounting and tank scan.
     """
-    import bisect
-    f = float(frequency)
-    if not math.isfinite(f) or f <= 0 or not rows:
-        raise ValueError('A positive frequency and native loss samples are required.')
-    xs = [row['frequency_Hz'] for row in rows]
-    if any(b <= a for a, b in zip(xs, xs[1:])):
-        raise ValueError('Loss samples must have unique sorted frequencies.')
-    i = bisect.bisect_left(xs, f)
-    if i == len(xs) or (i == 0 and f < xs[0]):
-        raise ValueError('Frequency is outside the native loss sweep.')
-    if xs[i] == f:
-        sample = rows[i]
-    else:
-        # Each endpoint was independently solved and balanced by Spectre.
-        # Linear interpolation of those *powers* preserves that balance;
-        # interpolating V and I separately does not solve the intermediate
-        # circuit and generally violates energy conservation.
-        left = evaluate_sample(rows, plan, xs[i-1], groups, overrides)
-        right = evaluate_sample(rows, plan, xs[i], groups, overrides)
-        if not left['available'] or not right['available']:
-            return {'available': False, 'reason': 'Native bracket loss unavailable: ' +
-                    (left.get('reason') or right.get('reason') or ''),
-                    'modules': {}, 'frequency_Hz': f, 'estimated': True}
-        if set(left['module_power_W']) != set(right['module_power_W']):
-            raise ValueError('Loss module identities differ between samples.')
-        t = (f-xs[i-1])/(xs[i]-xs[i-1])
-        power = left['input_power_W'] + t*(right['input_power_W']-left['input_power_W'])
-        powers = {name: left['module_power_W'][name] + t*(right['module_power_W'][name]-left['module_power_W'][name])
-                  for name in left['module_power_W']}
-        return {'available': True, 'reason': '', 'frequency_Hz': f,
-                'input_power_W': power, 'module_power_W': powers,
-                'modules': {name: 100*max(0.0, value)/power for name, value in powers.items()},
-                'residual_W': power-sum(powers.values()), 'estimated': True,
-                'bracket_Hz': [xs[i-1], xs[i]],
-                'method': 'linear interpolation of native endpoint powers',
-                'source_power_W': left.get('source_power_W', power) + t*(right.get('source_power_W', power)-left.get('source_power_W', power)),
-                'fixture_power_W': left.get('fixture_power_W', 0) + t*(right.get('fixture_power_W', 0)-left.get('fixture_power_W', 0)),
-                'excitation_condition': left.get('excitation_condition', ''), 'modeled_winding_losses': left.get('modeled_winding_losses', []), 'coupled_groups': left.get('coupled_groups', [])}
+    f = sample['frequency_Hz'] if f is None else f
     vp = complex(*sample['input'][:2])
     vn = complex(*sample['input'][2:])
     fixture = plan.get('port_fixture', 'none')
@@ -328,6 +289,61 @@ def evaluate_sample(rows, plan, frequency, groups=None, overrides=None):
     if abs(balance_error) > 1e-10 * max(abs(source_power), abs(fixture_power), abs(power), 1e-300):
         return {'available': False, 'reason': 'Native source and fixture power are inconsistent.',
                 'modules': {}, 'frequency_Hz': f, 'estimated': False}
+    return {'available': True, 'vp': vp, 'vn': vn, 'sample': sample, 'power': power,
+            'source_power': source_power, 'fixture_power': fixture_power, 'condition': condition}
+
+
+def evaluate_sample(rows, plan, frequency, groups=None, overrides=None):
+    """Calculate native sample powers or interpolate independently balanced powers.
+
+    groups maps each coupled instance ID to a common group label. A loss-power
+    override may replace a measured net terminal power for a verified device
+    model (e.g. series-R inductor); use paired overrides for every member of a
+    coupled block, and always check total power balance.
+    """
+    import bisect
+    f = float(frequency)
+    if not math.isfinite(f) or f <= 0 or not rows:
+        raise ValueError('A positive frequency and native loss samples are required.')
+    xs = [row['frequency_Hz'] for row in rows]
+    if any(b <= a for a, b in zip(xs, xs[1:])):
+        raise ValueError('Loss samples must have unique sorted frequencies.')
+    i = bisect.bisect_left(xs, f)
+    if i == len(xs) or (i == 0 and f < xs[0]):
+        raise ValueError('Frequency is outside the native loss sweep.')
+    if xs[i] == f:
+        sample = rows[i]
+    else:
+        # Each endpoint was independently solved and balanced by Spectre.
+        # Linear interpolation of those *powers* preserves that balance;
+        # interpolating V and I separately does not solve the intermediate
+        # circuit and generally violates energy conservation.
+        left = evaluate_sample(rows, plan, xs[i-1], groups, overrides)
+        right = evaluate_sample(rows, plan, xs[i], groups, overrides)
+        if not left['available'] or not right['available']:
+            return {'available': False, 'reason': 'Native bracket loss unavailable: ' +
+                    (left.get('reason') or right.get('reason') or ''),
+                    'modules': {}, 'frequency_Hz': f, 'estimated': True}
+        if set(left['module_power_W']) != set(right['module_power_W']):
+            raise ValueError('Loss module identities differ between samples.')
+        t = (f-xs[i-1])/(xs[i]-xs[i-1])
+        power = left['input_power_W'] + t*(right['input_power_W']-left['input_power_W'])
+        powers = {name: left['module_power_W'][name] + t*(right['module_power_W'][name]-left['module_power_W'][name])
+                  for name in left['module_power_W']}
+        return {'available': True, 'reason': '', 'frequency_Hz': f,
+                'input_power_W': power, 'module_power_W': powers,
+                'modules': {name: 100*max(0.0, value)/power for name, value in powers.items()},
+                'residual_W': power-sum(powers.values()), 'estimated': True,
+                'bracket_Hz': [xs[i-1], xs[i]],
+                'method': 'linear interpolation of native endpoint powers',
+                'source_power_W': left.get('source_power_W', power) + t*(right.get('source_power_W', power)-left.get('source_power_W', power)),
+                'fixture_power_W': left.get('fixture_power_W', 0) + t*(right.get('fixture_power_W', 0)-left.get('fixture_power_W', 0)),
+                'excitation_condition': left.get('excitation_condition', ''), 'modeled_winding_losses': left.get('modeled_winding_losses', []), 'coupled_groups': left.get('coupled_groups', [])}
+    rec = reconstruct_sample(sample, plan, f)
+    if not rec['available']:
+        return rec
+    vp, vn, sample, power = rec['vp'], rec['vn'], rec['sample'], rec['power']
+    source_power, fixture_power, condition = rec['source_power'], rec['fixture_power'], rec['condition']
     groups = dict(groups or {})
     instances = {node['id']: node for node in plan.get('instances', [])}
     if instances and not isinstance(next(iter(instances.values())), dict):

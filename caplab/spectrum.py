@@ -28,13 +28,27 @@ def simulation_grid(settings):
     if any(f < start or f > stop for f in observations):
         raise ValueError('Observation frequencies must be inside the simulation range.')
     if start == stop:
-        return [start]
+        return with_reference([start], settings)
     if mode == 'linear':
         grid = [start + (stop - start) * i / (count - 1) for i in range(count)]
     else:
         ratio = math.log(stop) - math.log(start)
         grid = [start * math.exp(ratio * i / (count - 1)) for i in range(count)]
     grid[0], grid[-1] = start, stop
+    return with_reference(grid, settings)
+
+
+def with_reference(grid, settings):
+    """Tank scan: add one low gm/gds reference frequency below the sweep."""
+    from .model import number
+    text = str(settings.get('tank_gm_ref') or '').strip()
+    if not text:
+        return grid
+    ref = number(text)
+    if not 0 < ref:
+        raise ValueError('The gm reference frequency must be positive.')
+    if ref < grid[0] * (1 - 1e-9):
+        return [ref] + list(grid)
     return grid
 
 

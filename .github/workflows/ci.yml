@@ -42,4 +42,5 @@ jobs:
         run: |
           cp -r examples "$RUNNER_TEMP/examples-committed"
           python -B -m caplab.demo
+          python -B -m caplab.tank_example
           python scripts/compare_numeric_tree.py "$RUNNER_TEMP/examples-committed" examples

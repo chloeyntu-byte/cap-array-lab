@@ -1,13 +1,14 @@
 [简体中文](README.zh-CN.md)
 
-# Cap Array Lab
+# Tank Scan Lab
 
-A desktop workbench for capacitor-array C/Q measurements, floating-port parasitic decomposition and RF resonance inspection, including Z11 Studio.
+A desktop workbench for LC-tank startup analysis: place an N-port inductor, a switched capacitor array and a cross-coupled gm core, and read f0, Rp, gm/gds and the startup gain from one small-signal run. It also keeps the capacitor-array C/Q measurements, floating-port parasitic decomposition, RF resonance inspection and Z11 Studio. The project was formerly named Cap Array Lab.
 
-![Cap Array Lab results](docs/screenshots/04-cq-results.png)
+![Tank Scan Lab results](docs/screenshots/08-tank-scan.png)
 
 ## What it does
 
+- **Tank scan:** tick what the canvas contains (inductor / N-port, cap array, gm core) to select the passive or active analysis. Per code it reports f0, LC-only f0, Rp(LC), Rp(LC+loading), terminal gm/gds, negative conductance, startup margin, gm·Rp, Q and per-module loss shares. See [docs/TANK_SCAN.md](docs/TANK_SCAN.md).
 - Draw circuits, connect named nets or wires, and scan decimal control registers across independent workbook pages.
 - Inspect per-code capacitance and Q, separating coupling, ground-path equivalent and floating P/N total admittance.
 - Reuse saved spectra at new observation frequencies, inspect first resonance and plot Z11 magnitude and phase.
@@ -30,6 +31,14 @@ From the repository root, open the offline example first:
 ```bash
 python3 app.py --project examples/ideal_array.json
 ```
+
+For the tank scan, open the synthetic tank example (analytic L, switched C and cross-coupled gm; four codes):
+
+```bash
+python3 app.py --tank --project examples/ideal_tank.json
+```
+
+`bash tank-scan-lab.sh` starts the workbench directly in the **Tank scan** mode. Saved data are re-analyzed when roles or the ticked contents change; running a new tank scan needs your native environment.
 
 Alternatively, run `bash launch.sh` and click **Load example**. Select **Ideal capacitor array** for C/Q, or **Parallel LC resonance → Measurement results → Z11 vs frequency** for impedance and phase. **Run SP / Measure C + Q** replays the analytic fixture when an example page is active; its status explicitly identifies synthetic replay. **Stop this page** cancels it. Replay uses a fixed eight-code model and fixed saved frequency grid; editing the circuit does not change that model. Start a new workbook for native work.
 
@@ -66,23 +75,26 @@ Provide your Cadence and license environment yourself. GUI launch isolates Pytho
 ```bash
 python3 app.py --help
 python3 app.py --project examples/ideal_array.json
+python3 app.py --tank --project examples/ideal_tank.json
 python3 -m caplab.demo
+python3 -m caplab.tank_example
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
-`caplab.demo` regenerates both synthetic example files. `--context` is the internal Maestro launch-context entry, not a general netlist runner. Tests requiring Tk skip without `DISPLAY`; use a display assigned to you for full UI tests. The full suite includes NumPy-based Z11 tests. There is no headless native simulation CLI.
+`caplab.demo` regenerates the two synthetic C/Q example files; `caplab.tank_example` regenerates `examples/ideal_tank.json`. `--context` is the internal Maestro launch-context entry, not a general netlist runner. Tests requiring Tk skip without `DISPLAY`; use a display assigned to you for full UI tests. The full suite includes NumPy-based Z11 tests. There is no headless native simulation CLI.
 
 ## Limitations
 
+- Tank scan values are small-signal values at the DC operating point, i.e. the startup condition. Steady-state swing, gain compression and phase noise need large-signal (HB/transient) simulation. Values at f0 interpolate between the two bracketing samples; narrow the sweep around f0 for accuracy.
 - Saved-spectrum interpolation is linear in complex admittance and never extrapolates. Coarse grids can miss narrow/high-Q resonance crossings.
 - Floating P/N decomposition is a terminal equivalent, not a physical capacitor inventory. Q values do not add.
-- Module loss shares require complete, balanced native current data. The synthetic example deliberately reports these as unavailable.
+- Module loss shares require complete, balanced native current data. The synthetic C/Q example deliberately reports these as unavailable; the synthetic tank example includes module currents.
 - Workbook files may contain your own local paths, library identities and results. Review them before sharing. Runtime state is written into ignored `.work/` and `runs/` directories; Z11 has its own saved state.
 - The tools do not perform DRC/LVS signoff. Touchstone import accepts supported full-matrix ASCII S-parameter formats; unsupported keywords or changed files are rejected.
 
 ## RF-FIELDWORK
 
-Product page: https://rf-fieldwork.pages.dev/cap/?lang=en
+Product page: https://rf-fieldwork.pages.dev/tank/?lang=en
 
 Other open-source tools:
 

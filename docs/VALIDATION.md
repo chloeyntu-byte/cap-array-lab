@@ -16,6 +16,10 @@ A read-only comparison of the original and bundled Z11 on a generic 101-frequenc
 
 The theme module is copied verbatim. Product-side font fallback handles Tk builds that return family names in lower case; the kit itself is unchanged. C/Q Canvas plots use the kit palette; Z11 uses the shared Matplotlib theme.
 
+## v1.1.0 tank scan
+
+`tests/test_tank_scan.py` adds analytic checks of the tank-scan analysis (f0, negative conductance, core loading, Rp(LC), Rp(LC+loading), margin, gm·Rp, LC-only f0, loss shares; a frequency-dependent gm for the cancellation definition), role/mode selection, review edge cases (reference point outside the resonance search, f0 on the first sweep sample, exact zero crossings), the low reference frequency and the bundled `examples/ideal_tank.json`. The full suite has 151 tests; under Python 3.6 with a private display, 150 pass and one optional Z11 GUI test skips. `python3 -m caplab.tank_example` regenerates the tank example byte-for-byte numerically (`scripts/compare_numeric_tree.py`). Native tank scans were cross-checked during development (see docs/TANK_SCAN.md) and are not part of this repository.
+
 Screenshots:
 
 - `screenshots/01-empty.png`: empty workbench and Load example.
